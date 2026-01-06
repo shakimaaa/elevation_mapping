@@ -12,7 +12,7 @@ def generate_launch_description():
         Node(
             package='elevation_mapping_cupy',
             executable='elevation_mapping_node',
-            name='elevation_mapping',
+            name='elevation_mapping_node',
             parameters=[
                 PathJoinSubstitution([
                     elevation_mapping_cupy_dir,
