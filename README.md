@@ -1,396 +1,287 @@
-# Robot-Centric Elevation Mapping
+# ROS2 Elevation Mapping Cupy 
+ **Status**: Under Development 🚧
+## Features 
+- **Point cloud-based map update**: *Functional*
+- **Image-based map update**: *Ongoing development*
+- **C++ Node**: *Functional*
+- **Python Node**: *Functional*
+- **Docker & VS Code Devcontainer**: *Provided*
 
-## PORT TO ROS2 Humble
+<!-- ![Elevation Map in ROS 2 Humble with Gazebo ](https://github.com/user-attachments/assets/0dd9ebbe-a90d-486f-9871-81921308fab9) -->
 
-This is a quick port of [Robot-Centric Elevation Mapping](https://github.com/ANYbotics/elevation_mapping) to ROS2 based on Aber-CRANC's [tf2 branch](https://github.com/Aber-CRANC/elevation_mapping/tree/tf2).
+## Installation
+A docker file, installation and build scripts, and a VS Code Dev Container have all been provided to ease integration and development.
+This has been tested with Ubuntu 22.04, ROS 2 Humble, Zenoh RMW, CUDA 12.1, and PyTorch 2.6.0.
+Some dependency issues with numpy, transforms3d, scipy, and ros2_numpy arose during setup so if versions of any of these packages are changed you may run into issues.
+The package.xml has been updated to ensure most dependencies are automatically installed via rosdep and some extra rosdep entries are provided to ensure proper versioning.
+This is not possible for some packages, e.g. pytorch, due to need for providing an --extra-index-url during installation.
+Therefore, this requirement is satsified inside of the docker build.
 
-Tested in ROS2 humble.
+To test out this package with the turtlebot3 Gazebo (classic) simulation you will need to install:
+- VS Code
+- Docker
+- NVIDIA Container Toolkit
+- NVIDIA CUDA Toolkit
 
-Port TODO list:
-- [x] Port of barebone functionality
-- [x] Fix all new bugs created during porting
-- [x] Timers
-- [x] Services
-- [ ] Fix multithreading
-- [ ] Demos
-- [x] Testing
+### Visual Studio Code
+```bash
+sudo snap install --classic code 
+```
 
-Known Issues:
-- The current ROS2 interpretation of filter chain causes issues with parameter redeclaration when using more than 1 postprocessing thread.
-- robot_pose_with_covariance_topic: directly take a [nav_msgs/Odometry] msg topic not a [geometry_msgs/PoseWithCovarianceStamped.msg]
+### Docker Installation
+```bash
+# Add Docker's official GPG key
+sudo apt-get update
+sudo apt-get install ca-certificates curl gnupg -y
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-Dependencies:
-- [grid_map](https://github.com/ANYbotics/grid_map/tree/humble) - humble branch 
-- [kindr](https://github.com/ANYbotics/kindr) native C build using Cmake.
-- [kindr_ros](https://github.com/SivertHavso/kindr_ros/tree/galactic) - ros2 galactic branch
+# Add Docker repository
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+# Install Docker
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+
+```
+
+### NVIDIA Container Toolkit Installation
+```bash
+# Configure the repository
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+# Update and install
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+
+# Configure Docker for NVIDIA
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+# Change Docker root folder
+cd
+mkdir docker
+sudo tee /etc/docker/daemon.json > /dev/null <<EOT
+{
+    "data-root": "$HOME/docker",
+    "runtimes": {
+        "nvidia": {
+            "args": [],
+            "path": "nvidia-container-runtime"
+        }
+    }
+}
+EOT
+```
+
+### NVIDIA CUDA-Toolkit install
+Use the following link for install install instructions: 
+https://developer.nvidia.com/cuda-12-1-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=22.04&target_type=deb_local
+
+### Docker Configuration and Workspace Cloning
+```bash
+sudo usermod -aG docker ${USER}
+# Use gituser.sh for Git credential setup
+```
+### Restart Your Computer
+- After completing the setup and configuration steps, it is necessary to restart your computer to ensure that all changes take effect.
+
+---------------------------------------------------------
+
+### Run the Container
+
+#### Clone the Elevation Mapping CUPY Repository
+```bash
+cd /home/<USERNAME>/
+git clone -b ros2_humble https://github.com/jwag/elevation_mapping_cupy.git
+```
+
+#### Building the Docker Workspace Container
+- Open the folder with VS Code
+- Select **"Dev Containers: Reopen in container"** in the bottom left from the blue button which will build the docker image.
+- Setup the workspace
+  ```bash
+  ./docker/setup.sh
+  ```
+- Build the workspace
+  ```bash
+  ./docker/build.sh
+
+#### Run The Turtlebot3 Demo
+The docker should set the environmental variable `TURTLEBOT3_MODEL=waffle_realsense_depth` to select the correct version of the turtlebot to simulate.
+
+In the first terminal start the zenoh router:
+```bash
+ros2 run rmw_zenoh_cpp rmw_zenohd
+```
+
+In a second terminal launch the turtlebot3 in Gazebo with the following command:
+```bash
+ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+``` 
+
+In a third terminal launch the elevation mapping node with the configs for the turtle. Set use_python_node to true to override the default use of the cpp node if you wish:
+```bash
+ros2 launch elevation_mapping_cupy elevation_mapping_turtle.launch.py use_python_node:=false
+```
+
+In a fourth terminal run the turtlebot3 teleop node if you want to drive the turtlebot around using the keyboard:
+```bash
+ros2 run turtlebot3_teleop teleop_keyboard 
+```
+
+---
+
+# Elevation Mapping cupy (*Instructions Not Updated for ROS2*)
+
+![python tests](https://github.com/leggedrobotics/elevation_mapping_cupy/actions/workflows/python-tests.yml/badge.svg)
+
+[Documentation](https://leggedrobotics.github.io/elevation_mapping_cupy/)
 
 ## Overview
 
-This is a [ROS2] package developed for elevation mapping with a mobile robot. The software is designed for (local) navigation tasks with robots which are equipped with a pose estimation (e.g. IMU & odometry) and a distance sensor (e.g. structured light (Kinect, RealSense), laser range sensor, stereo camera). The provided elevation map is limited around the robot and reflects the pose uncertainty that is aggregated through the motion of the robot (robot-centric mapping). This method is developed to explicitly handle drift of the robot pose estimation.
+The Elevaton Mapping CuPy software package represents an advancement in robotic navigation and locomotion.
+Integrating with the Robot Operating System (ROS) and utilizing GPU acceleration, this framework enhances point cloud registration and ray casting,
+crucial for efficient and accurate robotic movement, particularly in legged robots.
+![screenshot](docs/media/main_repo.png)
+![screenshot](docs/media/main_mem.png)
+![gif](docs/media/convex_approximation.gif)
 
-This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
+## Key Features
 
-The source code is released under a [BSD 3-Clause license](LICENSE).
+- **Height Drift Compensation**: Tackles state estimation drifts that can create mapping artifacts, ensuring more accurate terrain representation.
 
-**Author: Péter Fankhauser<br />
-Co-Author: Maximilian Wulf<br />
-Affiliation: [ANYbotics](https://www.anybotics.com/)<br />
-Maintainer: Maximilian Wulf, mwulf@anybotics.com, Magnus Gärtner, mgaertner@anybotics.com<br />**
+- **Visibility Cleanup and Artifact Removal**: Raycasting methods and an exclusion zone feature are designed to remove virtual artifacts and correctly interpret overhanging obstacles, preventing misidentification as walls.
 
-This projected was initially developed at ETH Zurich (Autonomous Systems Lab & Robotic Systems Lab).
+- **Learning-based Traversability Filter**: Assesses terrain traversability using local geometry, improving path planning and navigation.
 
-[This work is conducted as part of ANYmal Research, a community to advance legged robotics.](https://www.anymal-research.org/)
+- **Versatile Locomotion Tools**: Incorporates smoothing filters and plane segmentation, optimizing movement across various terrains.
 
-<img alt="Elevation Map Example" src="elevation_mapping_demos/doc/elevation_map.jpg" width="700">
+- **Multi-Modal Elevation Map (MEM) Framework**: Allows seamless integration of diverse data like geometry, semantics, and RGB information, enhancing multi-modal robotic perception.
 
+- **GPU-Enhanced Efficiency**: Facilitates rapid processing of large data structures, crucial for real-time applications.
 
-Videos of the elevation mapping software in use:
+## Overview
 
-<a alt="StarlETH Kinect elevation mapping" href="https://www.youtube.com/watch?v=I9eP8GrMyNQ"><img src="elevation_mapping_demos/doc/starleth_kinect.jpg" align="left" width="180" ></a>
-<a alt="ANYmal outdoor terrain mapping" href="https://www.youtube.com/watch?v=iVMsQPTM65M"><img src="elevation_mapping_demos/doc/anymal_forrest.jpg" align="left" width="180" ></a>
-<a alt="ANYmal rough-terrain locomotion planner" href="https://www.youtube.com/watch?v=CpzQu25iLa0"><img src="elevation_mapping_demos/doc/anymal_locomotion_planner.jpg" align="left" width="180" ></a>
-<a alt="ANYmal outdoor stair climbing" href="https://www.youtube.com/watch?v=vSveQrJLRTo"><img src="elevation_mapping_demos/doc/anymal_outdoor_stairs.jpg" width="180" ></a>
+![Overview of multi-modal elevation map structure](docs/media/overview.png)
 
-Ported to ROS2 at Teknolus : Under the support of Scientific and Technological Research Council of Türkiye - TEYDEB 1501 Project Number : 3220580
+Overview of our multi-modal elevation map structure. The framework takes multi-modal images (purple) and multi-modal (blue) point clouds as
+input. This data is input into the elevation map by first associating the data to the cells and then fused with different fusion algorithms into the various
+layers of the map. Finally the map can be post-processed with various custom plugins to generate new layers (e.g. traversability) or process layer for
+external components (e.g. line detection).
 
 ## Citing
 
-The robot-centric elevation mapping methods used in this software are described in the following paper (available [here](https://doi.org/10.3929/ethz-b-000272110)). If you use this work in an academic context, please cite the following publication(s):
+If you use the Elevation Mapping CuPy, please cite the following paper:
+Elevation Mapping for Locomotion and Navigation using GPU
 
-* > P. Fankhauser, M. Bloesch, and M. Hutter,
-  > **"Probabilistic Terrain Mapping for Mobile Robots with Uncertain Localization"**,
-  > in IEEE Robotics and Automation Letters (RA-L), vol. 3, no. 4, pp. 3019–3026, 2018. ([PDF](http://dx.doi.org/10.1109/LRA.2018.2849506))
+[Elevation Mapping for Locomotion and Navigation using GPU](https://arxiv.org/abs/2204.12876)
 
-        @article{Fankhauser2018ProbabilisticTerrainMapping,
-          author = {Fankhauser, P{\'{e}}ter and Bloesch, Michael and Hutter, Marco},
-          doi = {10.1109/LRA.2018.2849506},
-          title = {Probabilistic Terrain Mapping for Mobile Robots with Uncertain Localization},
-          journal = {IEEE Robotics and Automation Letters (RA-L)},
-          volume = {3},
-          number = {4},
-          pages = {3019--3026},
-          year = {2018}
-        }
+Takahiro Miki, Lorenz Wellhausen, Ruben Grandia, Fabian Jenelten, Timon Homberger, Marco Hutter  
 
-* > P. Fankhauser, M. Bloesch, C. Gehring, M. Hutter, and R. Siegwart,
-  > **"Robot-Centric Elevation Mapping with Uncertainty Estimates"**,
-  > in International Conference on Climbing and Walking Robots (CLAWAR), 2014. ([PDF](http://dx.doi.org/10.3929/ethz-a-010173654))
+```bibtex
+@inproceedings{miki2022elevation,
+  title={Elevation mapping for locomotion and navigation using gpu},
+  author={Miki, Takahiro and Wellhausen, Lorenz and Grandia, Ruben and Jenelten, Fabian and Homberger, Timon and Hutter, Marco},
+  booktitle={2022 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
+  pages={2273--2280},
+  year={2022},
+  organization={IEEE}
+}
+```
 
-        @inproceedings{Fankhauser2014RobotCentricElevationMapping,
-          author = {Fankhauser, P\'{e}ter and Bloesch, Michael and Gehring, Christian and Hutter, Marco and Siegwart, Roland},
-          title = {Robot-Centric Elevation Mapping with Uncertainty Estimates},
-          booktitle = {International Conference on Climbing and Walking Robots (CLAWAR)},
-          year = {2014}
-        }
+If you use the Multi-modal Elevation Mapping for color or semantic layers, please cite the following paper:
 
-## Installation
+[MEM: Multi-Modal Elevation Mapping for Robotics and Learning](https://arxiv.org/abs/2309.16818v1)
 
-### Dependencies
+Gian Erni, Jonas Frey, Takahiro Miki, Matias Mattamala, Marco Hutter
 
-This software is built on the Robotic Operating System ([ROS2]), which needs to be [installed](http://wiki.ros.org) first. Additionally, the Robot-Centric Elevation Mapping depends on following software:
+```bibtex
+@inproceedings{erni2023mem,
+  title={MEM: Multi-Modal Elevation Mapping for Robotics and Learning},
+  author={Erni, Gian and Frey, Jonas and Miki, Takahiro and Mattamala, Matias and Hutter, Marco},
+  booktitle={2023 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
+  pages={11011--11018},
+  year={2023},
+  organization={IEEE}
+}
+```
 
-- [Grid Map](https://github.com/ANYbotics/grid_map/tree/humble) (grid map library for mobile robots)
-- [kindr](http://github.com/anybotics/kindr) (kinematics and dynamics library for robotics),
-- [kindr_ros](https://github.com/SivertHavso/kindr_ros/tree/galactic) (ROS wrapper for kindr),
-- [Point Cloud Library (PCL)](http://pointclouds.org/) (point cloud processing),
-- [Eigen](http://eigen.tuxfamily.org) (linear algebra library).
+## Quick instructions to run
 
+### Installation
 
+First, clone to your catkin_ws
 
-### Building
+```zsh
+mkdir -p catkin_ws/src
+cd catkin_ws/src
+git clone https://github.com/leggedrobotics/elevation_mapping_cupy.git
+```
 
-In order to install the Robot-Centric Elevation Mapping, clone the latest version from this repository into your catkin workspace and compile the package using ROS.
+Then install dependencies.
+You can also use docker which already install all dependencies.
+When you run the script it should pull the image.
 
-    cd ws/src
-    git clone https://github.com/Muhammad540/elevation_mapping.git
-    cd ../
-    colcon build
+```zsh
+cd docker
+./run.sh
+```
 
-## Basic Usage
+You can also build locally by running `build.sh`, but in this case change `IMAGE_NAME` in `run.sh` to `elevation_mapping_cupy:latest`.
 
-In order to get the Robot-Centric Elevation Mapping to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files inside the config directory of the `elevation_mapping` package. Sepcifically you should focus on the following parameter files: 
+For more information, check [Document](https://leggedrobotics.github.io/elevation_mapping_cupy/getting_started/installation.html)
 
-- config/robots/ground_truth_demo.yaml
-- config/elevation_maps/long_range.yaml
-- config/sensor+processors.[choose your sensor file]
+### Build package
 
-### TurtleBot3 Waffle Simulation
+Inside docker container.
 
-You can test with TurtleBot3, by obtaining the pointcloud2 and pose data from the simulation and configuring the config/robots/ground_truth_demo.yaml file.
+```zsh
+cd $HOME/catkin_ws
+catkin build elevation_mapping_cupy
+catkin build convex_plane_decomposition_ros  # If you want to use plane segmentation
+catkin build semantic_sensor  # If you want to use semantic sensors
+```
 
-## Nodes
+### Run turtlebot example
 
-### Node: elevation_mapping
+![Elevation map examples](docs/media/turtlebot.png)
 
-This is the main Robot-Centric Elevation Mapping node. It uses the distance sensor measurements and the pose and covariance of the robot to generate an elevation map with variance estimates.
+```bash
+export TURTLEBOT3_MODEL=waffle
+roslaunch elevation_mapping_cupy turtlesim_simple_example.launch
+```
 
+For fusing semantics into the map such as rgb from a multi modal pointcloud:
 
-#### Subscribed Topics
+```bash
+export TURTLEBOT3_MODEL=waffle
+roslaunch elevation_mapping_cupy turtlesim_semantic_pointcloud_example.launch
+```
 
-* **`/points`** ([sensor_msgs/PointCloud2])
+For fusing semantics into the map such as rgb semantics or features from an image:
 
-    The distance measurements.
+```bash
+export TURTLEBOT3_MODEL=waffle
+roslaunch elevation_mapping_cupy turtlesim_semantic_image_example.launch
+```
 
-* **`/pose`** ([geometry_msgs/PoseWithCovarianceStamped])
+For plane segmentation:
 
-    The robot pose and covariance.
+```bash
+catkin build convex_plane_decomposition_ros
+export TURTLEBOT3_MODEL=waffle
+roslaunch elevation_mapping_cupy turtlesim_plane_decomposition_example.launch
+```
 
-* **`/tf`** ([tf2_msgs/TFMessage])
+To control the robot with a keyboard, a new terminal window needs to be opened.
+Then run
 
-    The transformation tree.
+```bash
+export TURTLEBOT3_MODEL=waffle
+roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
+```
 
-
-#### Published Topics
-
-* **`elevation_map`** ([grid_map_msgs/GridMap])
-
-    The entire (fused) elevation map. It is published periodically (see `fused_map_publishing_rate` parameter) or after the `trigger_fusion` service is called.
-
-* **`elevation_map_raw`** ([grid_map_msgs/GridMap])
-
-    The entire (raw) elevation map before the fusion step.
-
-
-#### Services
-
-* **`trigger_fusion`** ([std_srvs/Empty])
-
-    Trigger the fusing process for the entire elevation map and publish it. For example, you can trigger the map fusion step from the console with
-
-        ros2 service call /elevation_mapping/trigger_fusion
-
-* **`get_submap`** ([grid_map_msgs/GetGridMap])
-
-    Get a fused elevation submap for a requested position and size. For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) described in the odom frame and save it to a text file form the console with
-
-        ros2 service call -- /elevation_mapping/get_submap odom -0.5 0.0 0.5 1.2 []
-
-* **`get_raw_submap`** ([grid_map_msgs/GetGridMap])
-
-    Get a raw elevation submap for a requested position and size. For example, you can get the raw elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) described in the odom frame and save it to a text file form the console with
-
-        ros2 service call -- /elevation_mapping/get_raw_submap odom -0.5 0.0 0.5 1.2 []
-
-* **`clear_map`** ([std_srvs/Empty])
-
-    Initiates clearing of the entire map for resetting purposes. Trigger the map clearing with
-
-        ros2 service call /elevation_mapping/clear_map
-
-* **`masked_replace`** ([grid_map_msgs/SetGridMap])
-
-    Allows for setting the individual layers of the elevation map through a service call. The layer mask can be used to only set certain cells and not the entire map. Cells containing NAN in the mask are not set, all the others are set. If the layer mask is not supplied, the entire map will be set in the intersection of both maps. The provided map can be of different size and position than the map that will be altered. An example service call to set some cells marked with a mask in the elevation layer to 0.5 is
-
-        ros2 service call /elevation_mapping/masked_replace "map:
-          info:
-            header:
-              seq: 3
-              stamp: {secs: 3, nsecs: 80000000}
-              frame_id: 'odom'
-            resolution: 0.1
-            length_x: 0.3
-            length_y: 0.3
-            pose:
-              position: {x: 5.0, y: 0.0, z: 0.0}
-              orientation: {x: 0.0, y: 0.0, z: 0.0, w: 0.0}
-          layers: [elevation,mask]
-          basic_layers: [elevation]
-          data:
-          - layout:
-              dim:
-              - {label: 'column_index', size: 3, stride: 9}
-              - {label: 'row_index', size: 3, stride: 3}
-              data_offset: 0
-            data: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
-          - layout:
-              dim:
-              - {label: 'column_index', size: 3, stride: 9}
-              - {label: 'row_index', size: 3, stride: 3}
-              data_offset: 0
-            data: [0, 0, 0, .NAN, .NAN, .NAN, 0, 0, 0]
-          outer_start_index: 0
-          inner_start_index: 0"
-
-* **`save_map`** ([grid_map_msgs/ProcessFile])
-
-    Saves the current fused grid map and raw grid map to rosbag files. Field `topic_name` must be a base name, i.e. no leading slash character (/). If field `topic_name` is empty, then `elevation_map` is used per default. Example with default topic name
-
-        ros2 service call /elevation_mapping/save_map "file_path: '/home/integration/elevation_map.bag' topic_name: ''"
-
-* **`load_map`** ([grid_map_msgs/ProcessFile])
-
-    Loads the fused grid map and raw grid map from rosbag files. Field `topic_name` must be a base name, i.e. no leading slash character (/). If field `topic_name` is empty, then `elevation_map` is used per default. Example with default topic name
-
-        ros2 service call /elevation_mapping/load_map "file_path: '/home/integration/elevation_map.bag' topic_name: ''"
-
-* **`disable_updates`** ([std_srvs/Empty])
-
-    Stops updating the elevation map with sensor input. Trigger the update stopping with
-
-        ros2 service call /elevation_mapping/disable_updates {}
-
-* **`enable_updates`** ([std_srvs/Empty])
-
-    Start updating the elevation map with sensor input. Trigger the update starting with
-
-        ros2 service call /elevation_mapping/enable_updates {}
-
-#### Parameters
-
-* **`DEPRECATED point_cloud_topic`** (string, default: "/points")
-
-    The name of the distance measurements topic. Use input_sources instead. 
-    
-* **`input_sources`** (list of input sources, default: none)
-
-    Here you specify your inputs to elevation mapping, currently "pointcloud" inputs are supported. 
-    
-    Example configuration:
-    ```yaml
-    input_sources:
-        front: # A name to identify the input source
-          type: pointcloud # Supported types: pointcloud
-          topic: /lidar_front/depth/points
-          queue_size: 1
-          publish_on_update: true # Wheter to publish the elevation map after a callback from this source. 
-        rear:
-          type: pointcloud
-          topic: /lidar_rear/depth/points
-          queue_size: 5
-          publish_on_update: false
-    ```
-    No input sources can be configured with an empty array:
-    ```yaml
-    input_sources: []
-    ```
-* **`robot_pose_topic`** (string, default: "/robot_state/pose")
-
-    The name of the robot pose and covariance topic.
-
-* **`base_frame_id`** (string, default: "/robot")
-
-    The id of the robot base tf frame.
-
-* **`map_frame_id`** (string, default: "/map")
-
-    The id of the tf frame of the elevation map.
-
-* **`track_point_frame_id`** (string, default: "/robot")
-
-    The elevation map is moved along with the robot following a *track point*. This is the id of the tf frame in which the track point is defined.
-
-* **`track_point_x`**, **`track_point_y`**, **`track_point_z`** (double, default: 0.0, 0.0, 0.0)
-
-    The elevation map is moved along with the robot following a *track point*. This is the position of the track point in the `track_point_frame_id`.
-
-* **`robot_pose_cache_size`** (int, default: 200, min: 0)
-
-    The size of the robot pose cache.
-
-* **`min_update_rate`** (double, default: 2.0)
-
-    The mininum update rate (in Hz) at which the elevation map is updated either from new measurements or the robot pose estimates.
-
-* **`fused_map_publishing_rate`** (double, default: 1.0)
-
-    The rate for publishing the entire (fused) elevation map.
-
-* **`relocate_rate`** (double, default: 3.0)
-
-    The rate (in Hz) at which the elevation map is checked for relocation following the tracking point.
-
-* **`length_in_x`**, **`length_in_y`** (double, default: 1.5, min: 0.0)
-
-    The size (in m) of the elevation map.
-
-* **`position_x`**, **`position_y`** (double, default: 0.0)
-
-    The position of the elevation map center, in the elevation map frame. This parameter sets the planar position offsets between the generated elevation map and the frame in which it is published (`map_frame_id`). It is only useful if no `track_point_frame_id` parameter is used.
-
-* **`resolution`** (double, default: 0.01, min: 0.0)
-
-    The resolution (cell size in m/cell) of the elevation map.
-
-* **`min_variance`**, **`max_variance`** (double, default: 9.0e-6, 0.01)
-
-    The minimum and maximum values for the elevation map variance data.
-
-* **`mahalanobis_distance_threshold`** (double, default: 2.5)
-
-    Each cell in the elevation map has an uncertainty for its height value. Depending on the Mahalonobis distance of the existing height distribution and the new measurements, the incoming data is fused with the existing estimate, overwritten, or ignored. This parameter determines the threshold on the Mahalanobis distance which determines how the incoming measurements are processed.
-
-* **`sensor_processor/ignore_points_above`** (double, default: inf)
-    A hard threshold on the height of points introduced by the depth sensor. Points with a height over this threshold will not be considered valid during the data collection step.
-
-* **`sensor_processor/ignore_points_below`** (double, default: -inf)
-    A hard threshold on the height of points introduced by the depth sensor. Points with a height below this threshold will not be considered valid during the data collection step.
-
-* **`multi_height_noise`** (double, default: 9.0e-7)
-
-    Noise added to measurements that are higher than the current elevation map at that particular position. This noise-adding process is only performed if a point falls over the Mahalanobis distance threshold. A higher value is useful to adapt faster to dynamic environments (e.g., moving objects), but might cause more noise in the height estimation.
-
-* **`min_horizontal_variance`**, **`max_horizontal_variance`** (double, default: pow(resolution / 2.0, 2), 0.5)
-
-    The minimum and maximum values for the elevation map horizontal variance data.
-
-* **`enable_visibility_cleanup`** (bool, default: true)
-
-    Enable/disable a separate thread that removes elements from the map which are not visible anymore, by means of ray-tracing, originating from the sensor frame.
-
-* **`visibility_cleanup_rate`** (double, default: 1.0)
-
-    The rate (in Hz) at which the visibility clean-up is performed.
-
-* **`enable_continuous_cleanup`** (bool, default: false)
-
-    Enable/disable a continuous clean-up of the elevation map. If enabled, on arrival of each new sensor data the elevation map will be cleared and filled up only with the latest data from the sensor. When continuous clean-up is enabled, visibility clean-up will automatically be disabled since it is not needed in this case.
-    
-* **`num_callback_threads`** (int, default: 1, min: 1)
-    The number of threads to use for processing callbacks. More threads results in higher throughput, at cost of more resource usage. 
-
-* **`postprocessor_pipeline_name`** (string, default: postprocessor_pipeline)
-
-    The name of the pipeline to execute for postprocessing. It expects a pipeline configuration to be loaded in the private namespace of the node under this name. 
-    E.g.:
-    ```
-      <node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
-          ...
-          <ros2 param command="load" file="$(find elevation_mapping_demos)/config/postprocessor_pipeline.yaml" />
-      </node>
-    ```
-    A pipeline is a grid_map_filter chain, see grid_map_demos/filters_demo.yaml and [ros / filters](http://wiki.ros.org/filters) for more information. 
-
-* **`postprocessor_num_threads`** (int, default: 1, min: 1)
-
-    The number of threads to use for asynchronous postprocessing. More threads results in higher throughput, at cost of more resource usage. 
-
-* **`scanning_duration`** (double, default: 1.0)
-
-    The sensor's scanning duration (in s) which is used for the visibility cleanup. Set this roughly to the duration it takes between two consecutive full scans (e.g. 0.033 for a ToF camera with 30 Hz, or 3 s for a rotating laser scanner). Depending on how dense or sparse your scans are, increase or reduce the scanning duration. Smaller values lead to faster dynamic object removal and bigger values help to reduce faulty map cleanups.
-
-* **`sensor_cutoff_min_depth`**, **`sensor_cutoff_max_depth`** (double, default: 0.2, 2.0)
-
-    The minimum and maximum values for the length of the distance sensor measurements. Measurements outside this interval are ignored.
-
-* **`sensor_model_normal_factor_a`**, **`sensor_model_normal_factor_b`**, **`sensor_model_normal_factor_c`**, **`sensor_model_lateral_factor`** (double)
-
-    The data for the sensor noise model.
-
-## Changelog
-
-See [Changelog]
-
-## Bugs & Feature Requests
-
-Please report bugs and request features using the [Issue Tracker](https://github.com/anybotics/elevation_mapping/issues).
-
-[Changelog]: CHANGELOG.rst
-[ROS]: http://www.ros.org
-[rviz]: http://wiki.ros.org/rviz
-[grid_map_msgs/GridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msgs/msg/GridMap.msg
-[sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
-[geometry_msgs/PoseWithCovarianceStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html
-[tf2_msgs/TFMessage]: http://docs.ros.org/en/noetic/api/tf2_msgs/html/msg/TFMessage.html
-[std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
-[grid_map_msgs/GetGridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msgs/srv/GetGridMap.srv
-[grid_map_msgs/ProcessFile]: https://github.com/ANYbotics/grid_map/blob/master/grid_map_msgs/srv/ProcessFile.srv
+Velocity inputs can be sent to the robot by pressing the keys `a`, `w`, `d`, `x`. To stop the robot completely, press `s`.
