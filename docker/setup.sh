@@ -4,4 +4,4 @@ vcs import < src/elevation_mapping_cupy/docker/src.repos src/ --recursive -w $((
 
 sudo apt update
 rosdep update
-rosdep install --from-paths src --ignore-src -y -r
+rosdep install --from-paths src --ignore-src -y -r --skip-keys "numpy_lessthan_2"

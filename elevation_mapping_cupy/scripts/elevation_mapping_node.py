@@ -364,7 +364,55 @@ class ElevationMappingNode(Node):
         additional_channels = self.param.subscriber_cfg[sub_key].get("channels", [])
         channels = ["x", "y", "z"] + additional_channels
         try:
-            points = rnp.numpify(msg)
+            # points = rnp.numpify(msg)
+            # 1. 手动解析点云数据 (解决 48 字节步长和 numpify 报错)
+            raw_data = np.frombuffer(msg.data, dtype=np.uint8).reshape(-1, msg.point_step)
+            
+            # 重新定义 points 变量，确保后续逻辑能找到它
+            points = np.zeros(raw_data.shape[0], dtype=[(ch, np.float32) for ch in channels])
+            
+            field_offsets = {f.name: f.offset for f in msg.fields}
+            for ch in channels:
+                if ch in field_offsets:
+                    off = field_offsets[ch]
+                    points[ch] = raw_data[:, off:off+4].view(np.float32).flatten()
+                else:
+                    self.get_logger().warn(f"字段 {ch} 不存在！")
+
+            if points.size == 0:
+                return
+
+            # 2. 获取 TF 变换 (必须在调用 input_pointcloud 之前定义 R 和 t_np)
+            frame_sensor_id = msg.header.frame_id
+            transform_sensor_to_map = self.safe_lookup_transform(
+                self.map_frame,
+                frame_sensor_id,
+                msg.header.stamp
+            )
+            t = transform_sensor_to_map.transform.translation
+            q = transform_sensor_to_map.transform.rotation
+            
+            # 定义 R 和 t_np，解决 "referenced before assignment" 错误
+            t_np = np.array([t.x, t.y, t.z], dtype=np.float32)
+            R = quaternion_matrix([q.x, q.y, q.z, q.w])[:3, :3].astype(np.float32)
+
+            # 3. 准备 input_pointcloud 需要的 N x D 矩阵
+            pts_final = np.zeros((points.shape[0], len(channels)), dtype=np.float32)
+            for i, ch in enumerate(channels):
+                pts_final[:, i] = points[ch]
+
+            # 4. 调用地图更新接口 (填满 7 个必要参数)
+            # pts, channels, R, t_np, t_stamp, pos_noise, ori_noise
+            self._map.input_pointcloud(
+                pts_final, 
+                channels, 
+                R, 
+                t_np, 
+                # self._last_t, 
+                0.001, 
+                0.001
+            )
+            # self._pointcloud_process_counter += 1
         except Exception as e:
             self.get_logger().warn(f"Failed to numpify point cloud: {e}")
             return
@@ -451,6 +499,7 @@ class ElevationMappingNode(Node):
                     pts = np.hstack((pts, data))
         self._map.input_pointcloud(pts, channels, R, t_np, 0, 0)
         self._pointcloud_process_counter += 1
+        self.get_logger().info("Received pointcloud")
 
     def pose_update(self) -> None:
         if self._last_t is None:

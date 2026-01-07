@@ -7,7 +7,7 @@ BUILD_TYPE=RelWithDebInfo #Debug, Release, RelWithDebInfo, MinSizeRel
 colcon build \
         --continue-on-error \
         --parallel-workers $(nproc) \
-        --merge-install \
+        # --merge-install \
         --symlink-install \
         --event-handlers console_cohesion+ \
         --base-paths src \

@@ -1,7 +1,7 @@
 elevation_mapping:
   ros__parameters:
     #### Plugins ########
-    plugin_config_file: '$(find_package_share elevation_mapping_cupy)/config/core/plugin_config.yaml'
+    plugin_config_file: 'src/elevation_mapping_cupy/elevation_mapping_cupy/config/core/plugin_config.yaml'
 
     #### Channel Fusions ########
     pointcloud_channel_fusions:
@@ -33,15 +33,15 @@ elevation_mapping:
         topic_name: /cloud_registered_body
         data_type: pointcloud
 
-      color_cam: # for color camera
-        topic_name: '/camera/rgb/image_raw'
-        camera_info_topic_name: '/camera/depth/camera_info'
-        data_type: image
-      semantic_cam: # for semantic images
-        topic_name: '/front_cam/semantic_image'
-        camera_info_topic_name: '/front_cam/camera/depth/camera_info_resized'
-        channel_info_topic_name: '/front_cam/channel_info'
-        data_type: image
+      # color_cam: # for color camera
+      #   topic_name: '/camera/rgb/image_raw'
+      #   camera_info_topic_name: '/camera/depth/camera_info'
+      #   data_type: image
+      # semantic_cam: # for semantic images
+      #   topic_name: '/front_cam/semantic_image'
+      #   camera_info_topic_name: '/front_cam/camera/depth/camera_info_resized'
+      #   channel_info_topic_name: '/front_cam/channel_info'
+      #   data_type: image
 
     #### Publishers ########
     # topic_name:

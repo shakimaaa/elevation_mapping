@@ -73,7 +73,7 @@ ElevationMappingNode::ElevationMappingNode(const rclcpp::NodeOptions& options)
   this->get_parameter("voxel_filter_size", voxel_filter_size_);
 
   RCLCPP_INFO(this->get_logger(), "initialize_frame_id: %s", initialize_frame_id_.empty() ? "[]" : initialize_frame_id_[0].c_str());
-  // RCLCPP_INFO(this->get_logger(), "initialize_tf_offset: [%f, %f, %f, %f]", initialize_tf_offset_[0], initialize_tf_offset_[1], initialize_tf_offset_[2], initialize_tf_offset_[3]);
+  RCLCPP_INFO(this->get_logger(), "initialize_tf_offset: [%f, %f, %f, %f]", initialize_tf_offset_[0], initialize_tf_offset_[1], initialize_tf_offset_[2], initialize_tf_offset_[3]);
   RCLCPP_INFO(this->get_logger(), "pose_topic: %s", pose_topic.c_str());
   RCLCPP_INFO(this->get_logger(), "map_frame: %s", mapFrameId_.c_str());
   RCLCPP_INFO(this->get_logger(), "base_frame: %s", baseFrameId_.c_str());
