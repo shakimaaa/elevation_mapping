@@ -1,4 +1,6 @@
 #!/bin/bash
+
+# This only runs once time after the docker image is built.
 set -e
 cd ~/workspace
 # Set the default build type

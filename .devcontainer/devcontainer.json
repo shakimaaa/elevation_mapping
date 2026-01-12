@@ -20,7 +20,7 @@
 		"--ulimit=rtprio=98",
 		"--ulimit=rttime=-1",
 		"--ulimit=memlock=8428281856",
-		"--name=elevation_cj_sim_mix"
+		"--name=test"
 	],
 	"containerEnv": {
 		"DISPLAY": "${localEnv:DISPLAY}", // Needed for GUI try ":0" for windows
@@ -70,8 +70,5 @@
 	"workspaceMount": "source=${localWorkspaceFolder},target=/home/ros/workspace/src,type=bind",
 	"workspaceFolder": "/home/ros/workspace",
 
-	"postCreateCommand": [
-		// 设置挂载目录的权限
-		"sudo chown -R ros:ros /home/ros/workspace/src"
-	]
+	"postCreateCommand": "sudo chown -R ros:ros /home/ros/workspace/src"
 }
