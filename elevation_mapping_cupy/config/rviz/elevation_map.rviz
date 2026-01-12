@@ -9,6 +9,7 @@ Panels:
         - /GridMap1
         - /GridMap2
         - /GridMap3
+        - /Odometry1
       Splitter Ratio: 0.5
     Tree Height: 555
   - Class: rviz_common/Selection
@@ -128,6 +129,45 @@ Visualization Manager:
         Value: /elevation_mapping/filtered_elevation_map
       Use Rainbow: true
       Value: true
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz_default_plugins/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: true
+      Enabled: true
+      Keep: 1
+      Name: Odometry
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 255; 25; 0
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Axes
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /Odometry
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -174,7 +214,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 9.734620094299316
+      Distance: 10.270241737365723
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -189,10 +229,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.224797010421753
+      Pitch: 0.8047975897789001
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.518582344055176
+      Yaw: 2.895455837249756
     Saved: ~
 Window Geometry:
   Displays:
@@ -210,5 +250,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1200
-  X: 66
-  Y: 60
+  X: 1328
+  Y: 164

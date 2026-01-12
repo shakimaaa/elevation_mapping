@@ -12,8 +12,8 @@ ARG ROS_DISTRO=humble
 ARG USERNAME=ros
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
-ARG RMW_NAME=zenoh
 ARG INSTALL_EMCUPY_ROSDEPS=true
+#ARG RMW_NAME=zenoh
 
 # Environment variables
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -27,11 +27,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     COLCON_PREFIX_PATH=/opt/ros/${ROS_DISTRO} \
     LD_LIBRARY_PATH=/opt/ros/${ROS_DISTRO}/lib:/usr/local/cuda/lib64 \
     PATH=/opt/ros/${ROS_DISTRO}/bin:/usr/src/tensorrt/bin:/usr/local/cuda/bin:$PATH \
-    PYTHONPATH=/opt/ros/${ROS_DISTRO}/lib/python3.10/site-packages \
-    # Used by various ROS2 packages
-    RMW_IMPLEMENTATION=rmw_${RMW_NAME}_cpp \
-    # Should be the same as above but with dashes instead of underscores
-    RMW_IMPLEMENTATION_DASH=rmw-${RMW_NAME}-cpp
+    PYTHONPATH=/opt/ros/${ROS_DISTRO}/lib/python3.10/site-packages
 
 # Install basic utilities and dependencies
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -61,7 +57,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && apt update && apt install -y --no-install-recommends \
         ros-${ROS_DISTRO}-ros-base \
         python3-argcomplete \
-        ros-${ROS_DISTRO}-${RMW_IMPLEMENTATION_DASH} \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -185,7 +180,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         # rosdep rviz2
         ros-${ROS_DISTRO}-rviz2\
         # replacing with rosdep gazebo_ros_pkgs 
-        ros-${ROS_DISTRO}-gazebo-ros\
+        # ros-${ROS_DISTRO}-gazebo-ros\
         # rosdep grid_map_cv
         ros-${ROS_DISTRO}-grid-map-cv\
         # rosdep grid_map_core
@@ -196,17 +191,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         python3-shapely\
         python3-scipy\
         python3-ruamel.yaml\
-        #################################
-        ### For debugging elevation_mapping_cupy by setting up turtlebot3_simulations####
-        # ros-${ROS_DISTRO}-turtlebot3*\
-        ros-${ROS_DISTRO}-camera-calibration-parsers\
-        ros-${ROS_DISTRO}-camera-info-manager\
-        ros-${ROS_DISTRO}-gazebo-plugins\
-        ros-${ROS_DISTRO}-turtlebot3-msgs\
-        ros-${ROS_DISTRO}-turtlebot3-teleop\
-        # replacing with rosdep gazebo_ros_pkgs
-        ros-${ROS_DISTRO}-gazebo-ros-pkgs\
-        #############################################
         && apt clean && \
         rm -rf /var/lib/apt/lists/* ;\
     fi
