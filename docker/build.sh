@@ -2,7 +2,7 @@
 
 # This only runs once time after the docker image is built.
 set -e
-cd ~/workspace
+cd /cj_gazebo_sim
 # Set the default build type
 source /opt/ros/$ROS_DISTRO/setup.bash
 BUILD_TYPE=RelWithDebInfo #Debug, Release, RelWithDebInfo, MinSizeRel
@@ -11,7 +11,7 @@ colcon build \
         --parallel-workers $(nproc) \
         --symlink-install \
         --event-handlers console_cohesion+ \
-        --base-paths src/elevation_map_msgs src/elevation_mapping_cupy src/plane_segmentation src/sensor_processing \
+        --base-paths /cj_gazebo_sim/src/elevation/elevation_mapping/elevation_map_msgs /cj_gazebo_sim/src/elevation/elevation_mapping/elevation_mapping_cupy /cj_gazebo_sim/src/elevation/elevation_mapping/plane_segmentation /cj_gazebo_sim/src/elevation/elevation_mapping/sensor_processing \
         --cmake-args \
                 "-DCMAKE_BUILD_TYPE=$BUILD_TYPE" \
                 "-DCMAKE_EXPORT_COMPILE_COMMANDS=On" \
