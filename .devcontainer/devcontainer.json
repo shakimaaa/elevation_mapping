@@ -1,0 +1,74 @@
+// See https://aka.ms/vscode-remote/devcontainer.json for format details.
+{
+	"name": "Elevation Mapping CUPY Workspace",
+	"image": "vsc-elevation_mapping_cupy-705e59e7547194af3f6f0faaf0ae0d4b5f5fe25e645bfc4810f834fb06f0bd8e-uid:latest",
+	"context": "..",
+	"remoteUser": "ros",
+	"runArgs": [
+		"--network=host",
+		"--cap-add=SYS_PTRACE",
+		"--cap-add=SYS_NICE",
+		"--security-opt=seccomp:unconfined",
+		"--security-opt=apparmor:unconfined",
+		// "--volume=/tmp/.X11-unix:/tmp/.X11-unix",
+		"--volume=/mnt/wslg:/mnt/wslg",
+		"--ipc=host",
+		"--pid=host",
+		"--runtime=nvidia",
+		"--gpus=all",
+		"--privileged",
+		"--ulimit=rtprio=98",
+		"--ulimit=rttime=-1",
+		"--ulimit=memlock=8428281856",
+		"--name=test"
+	],
+	"containerEnv": {
+		"DISPLAY": "${localEnv:DISPLAY}", // Needed for GUI try ":0" for windows
+		"WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+		"XDG_RUNTIME_DIR": "${localEnv:XDG_RUNTIME_DIR}",
+		"PULSE_SERVER": "${localEnv:PULSE_SERVER}",
+		"LIBGL_ALWAYS_SOFTWARE": "1", // Needed for software rendering of opengl
+		"NVIDIA_DRIVER_CAPABILITIES": "all"
+	},
+	"mounts": [
+	    "source=/dev,target=/dev,type=bind,consistency=cached",
+	//     "source=~/bag_files,target=/workspaces/vscode-container-workspace/bag_files,type=bind,consistency=cached"
+			"source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+	],
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"remote.autoForwardPorts": false,
+				"remote.autoForwardPortsSource": "output",
+				"otherPortsAttributes": { "onAutoForward" : "ignore" }
+			},
+			"extensions": [
+				"althack.ament-task-provider",
+				"betwo.b2-catkin-tools",
+				"DotJoshJohnson.xml",
+				"ms-azuretools.vscode-docker",
+				"ms-vscode.cmake-tools",
+				"ms-python.python",
+				"ms-vscode.cpptools",
+				"redhat.vscode-yaml",
+				"smilerobotics.urdf",
+				"streetsidesoftware.code-spell-checker",
+				"twxs.cmake",
+				"yzhang.markdown-all-in-one",
+				"zachflower.uncrustify",
+				"mhutchie.git-graph",
+				"eamodio.gitlens",
+				"ms-vscode.cpptools-extension-pack",
+				"usernamehw.errorlens",
+				"ms-iot.vscode-ros",
+				"alefragnani.Bookmarks",
+				"ms-vscode.live-server"
+				
+			]
+		}
+	},
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/ros/workspace/src,type=bind",
+	"workspaceFolder": "/home/ros/workspace",
+
+	"postCreateCommand": "sudo chown -R ros:ros /home/ros/workspace/src"
+}

@@ -171,7 +171,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: camera_init
+    Fixed Frame: body
     Frame Rate: 30
   Name: root
   Tools:
@@ -251,4 +251,4 @@ Window Geometry:
     collapsed: true
   Width: 1200
   X: 1328
-  Y: 164
+  Y: 255
