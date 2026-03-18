@@ -72,7 +72,7 @@
 
       fastlio_lidar:
         # topic_name: /cloud_registered_body
-        topic_name: /mid360_PointCloud2
+        topic_name: /cloud_lidar2_filtered
         data_type: pointcloud
 
       # front_bpearl:
