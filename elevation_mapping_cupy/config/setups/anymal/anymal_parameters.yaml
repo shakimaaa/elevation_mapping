@@ -2,14 +2,14 @@
   ros__parameters:
     #### Basic parameters ########
     resolution: 0.1                                # resolution in m.
-    map_length: 5.0                                 # map's size in m.
+    map_length: 6.0                                 # map's size in m.
     sensor_noise_factor: 0.01                       # point's noise is sensor_noise_factor*z^2 (z is distance from sensor).
     mahalanobis_thresh: 2.0                         # points outside this distance is outlier.
     outlier_variance: 0.01                          # if point is outlier, add this value to the cell.
     drift_compensation_variance_inler: 0.05         # cells under this value is used for drift compensation.
     max_drift: 0.1                                  # drift compensation happens only the drift is smaller than this value (for safety)
     drift_compensation_alpha: 0.05                   # drift compensation alpha for smoother update of drift compensation
-    time_variance: 0.0001                           # add this value when update_variance is called.
+    time_variance: 0.00001                           # add this value when update_variance is called.
     max_variance: 100.0                             # maximum variance for each cell.
     initial_variance: 1000.0                        # initial variance for each cell.
     traversability_inlier: 0.9                      # cells with higher traversability are used for drift compensation.
@@ -45,6 +45,20 @@
     map_frame: 'base'                        # 地图与高程的参考系（固定世界系，如 LIO 的 camera_init）
     base_frame: 'robot'                              # 机器人基座，地图中心跟随该 frame 在 map_frame 下的位置
     corrected_map_frame: 'odom_corrected'
+
+    #### Body 采样点云（Python elevation_mapping_node 内）########
+    # 车体系 GridMap 正方形边长 [m]（高程栅格不按矩形裁切）；点云仍用下面矩形 body_map_length_x/y
+    body_map_grid_length: 4.0
+    # 车体系中心矩形：x 为列方向(前后)列长，y 为行方向(左右)行宽（仅体点云窗口）；resolution=0.1 时 2.6→每行 26 格
+    body_map_length_x: 2.6
+    body_map_length_y: 1.6
+    body_cloud_index_order: 'right_back'         # k=0 右后；每行 col 0…（后→前），再下一行（右→左）
+    body_cloud_publish_index_markers: true        # 发布 MarkerArray 显示每个点的一维编号 k
+    body_cloud_marker_stride: 1                  # 1=每个点都标；>1 仅标 k, k+stride, …（减轻 RViz 负担）
+    body_cloud_marker_scale: 0.06
+    body_cloud_marker_z_offset: 0.03
+    # false：车体系栅格+体点云用 base→map 完整四元数（pitch/roll/yaw）；true：仅 yaw（旧平地假设）
+    body_frame_yaw_only: false
 
     #### Feature toggles ########
     enable_edge_sharpen: true                     # 边缘锐化

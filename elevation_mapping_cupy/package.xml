@@ -21,6 +21,7 @@
     <depend>std_srvs</depend>    
     <depend>sensor_msgs</depend>
     <depend>geometry_msgs</depend>
+    <depend>visualization_msgs</depend>
     <!-- Might need to remove point_cloud_transport if not used -->
     <depend>point_cloud_transport</depend>
     <depend>message_filters</depend>
