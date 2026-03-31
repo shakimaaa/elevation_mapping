@@ -139,6 +139,17 @@ class ElevationMappingNode(Node):
         self._body_frame_yaw_only = (
             self.get_parameter("body_frame_yaw_only").get_parameter_value().bool_value
         )
+        if not self.has_parameter("body_cloud_xyz_follow_orientation"):
+            self.declare_parameter("body_cloud_xyz_follow_orientation", True)
+        self._body_cloud_xyz_follow_orientation = (
+            self.get_parameter("body_cloud_xyz_follow_orientation")
+            .get_parameter_value()
+            .bool_value
+        )
+
+        self.get_logger().info(
+            f"车体高程: GridMap={self.body_map_topic}  PointCloud2={self.body_cloud_topic}"
+        )
 
     def initialize_elevation_mapping(self) -> None:
         self.param.update()
@@ -762,9 +773,14 @@ class ElevationMappingNode(Node):
 
     def _extract_body_frame_grid_and_cloud(
         self, layer_name: str
-    ) -> tuple[np.ndarray | None, np.ndarray | None]:
+    ) -> tuple[
+        np.ndarray | None,
+        np.ndarray | None,
+        np.ndarray | None,
+        np.ndarray | None,
+    ]:
         if self._map_q is None or self._map_t is None or self._last_t is None:
-            return None, None
+            return None, None, None, None
 
         self._map.get_map_with_name_ref(layer_name, self._map_data)
 
@@ -778,7 +794,7 @@ class ElevationMappingNode(Node):
             self.get_logger().warn(
                 f"TF lookup failed in _extract_body_frame_grid_and_cloud: {e}"
             )
-            return None, None
+            return None, None, None, None
 
         t = transform.transform.translation
         q = transform.transform.rotation
@@ -808,7 +824,7 @@ class ElevationMappingNode(Node):
             origin_x,
             origin_y,
         )
-        return body_grid, body_cloud
+        return body_grid, body_cloud, R_body, t_map_body
 
     def extract_layer_in_body_frame_gridmap(
         self,
@@ -877,7 +893,7 @@ class ElevationMappingNode(Node):
         )
 
     def _on_body_frame_timer(self) -> None:
-        body_grid, body_cloud = self._extract_body_frame_grid_and_cloud(
+        body_grid, body_cloud, R_body, t_map_body = self._extract_body_frame_grid_and_cloud(
             self.body_map_layer,
         )
         if body_grid is None:
@@ -892,6 +908,8 @@ class ElevationMappingNode(Node):
             length_x=self._body_map_length_x,
             length_y=self._body_map_length_y,
             body_map=body_cloud,
+            R_body_to_map=R_body,
+            t_map_body=t_map_body,
         )
 
     def publish_map_in_body(
@@ -1012,11 +1030,86 @@ class ElevationMappingNode(Node):
                     put(row, col)
         return pts
 
+    def _build_body_pointcloud_xyz_with_orientation(
+        self,
+        body_map: np.ndarray,
+        length_x: float,
+        length_y: float,
+        R_body_to_map: np.ndarray,
+        t_map_body: np.ndarray,
+    ) -> np.ndarray:
+        """车体系点云 x,y,z：地图高程点在 map 系为 (水平投影点.xy, 栅格高程)，再 R^T 映回 body。
+        pitch/roll 变化时，同一下标 k 的 x,y 不再等于水平栅格上的常数坐标。
+        与 _sample_body_window_pointcloud 一致：z_rel = map_z - t_z。"""
+        resolution = self._map.resolution
+        half_local_x = length_x / 2.0
+        half_local_y = length_y / 2.0
+        rows, cols = body_map.shape
+        n = rows * cols
+        pts = np.empty((n, 3), dtype=np.float32)
+        bm = body_map.astype(np.float32, copy=False)
+        order = self._body_cloud_index_order
+        idx = 0
+        R64 = R_body_to_map.astype(np.float64)
+        t64 = t_map_body.astype(np.float64)
+
+        def put_oriented(r: int, c: int) -> None:
+            nonlocal idx
+            z_rel = float(bm[r, c])
+            x_grid = -half_local_x + (c + 0.5) * resolution
+            y_grid = -half_local_y + (r + 0.5) * resolution
+            if not np.isfinite(z_rel):
+                pts[idx, 0] = float("nan")
+                pts[idx, 1] = float("nan")
+                pts[idx, 2] = float("nan")
+            else:
+                p_h_body = np.array([x_grid, y_grid, 0.0], dtype=np.float64)
+                p_h_map = R64 @ p_h_body + t64
+                z_map = z_rel + float(t64[2])
+                p_map = np.array([p_h_map[0], p_h_map[1], z_map], dtype=np.float64)
+                p_body = R64.T @ (p_map - t64)
+                pts[idx, 0] = np.float32(p_body[0])
+                pts[idx, 1] = np.float32(p_body[1])
+                pts[idx, 2] = np.float32(p_body[2])
+            idx += 1
+
+        if order == "left_back":
+            for row in range(rows - 1, -1, -1):
+                for col in range(cols):
+                    put_oriented(row, col)
+        elif order == "right_back":
+            for row in range(rows):
+                for col in range(cols):
+                    put_oriented(row, col)
+        elif order == "row_major":
+            for row in range(rows):
+                for col in range(cols):
+                    put_oriented(row, col)
+        elif order == "column_major":
+            for col in range(cols):
+                for row in range(rows):
+                    put_oriented(row, col)
+        elif order == "row_major_reverse":
+            for row in range(rows - 1, -1, -1):
+                for col in range(cols - 1, -1, -1):
+                    put_oriented(row, col)
+        elif order == "column_major_reverse":
+            for col in range(cols - 1, -1, -1):
+                for row in range(rows - 1, -1, -1):
+                    put_oriented(row, col)
+        else:
+            for row in range(rows):
+                for col in range(cols):
+                    put_oriented(row, col)
+        return pts
+
     def publish_body_elevation_pointcloud(
         self,
         length_x: float | None = None,
         length_y: float | None = None,
         body_map: np.ndarray | None = None,
+        R_body_to_map: np.ndarray | None = None,
+        t_map_body: np.ndarray | None = None,
     ) -> None:
         if length_x is None:
             length_x = self._body_map_length_x
@@ -1033,7 +1126,16 @@ class ElevationMappingNode(Node):
 
         rows, cols = body_map.shape
         n = rows * cols
-        pts = self._build_body_pointcloud_xyz(body_map, length_x, length_y)
+        if (
+            self._body_cloud_xyz_follow_orientation
+            and R_body_to_map is not None
+            and t_map_body is not None
+        ):
+            pts = self._build_body_pointcloud_xyz_with_orientation(
+                body_map, length_x, length_y, R_body_to_map, t_map_body
+            )
+        else:
+            pts = self._build_body_pointcloud_xyz(body_map, length_x, length_y)
 
         cloud = PointCloud2()
         cloud.header.frame_id = self.base_frame
@@ -1042,7 +1144,7 @@ class ElevationMappingNode(Node):
         )
         cloud.height = 1
         cloud.width = n
-        cloud.is_dense = bool(np.isfinite(pts[:, 2]).all())
+        cloud.is_dense = bool(np.isfinite(pts).all())
         cloud.fields = [
             PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
             PointField(name="y", offset=4, datatype=PointField.FLOAT32, count=1),

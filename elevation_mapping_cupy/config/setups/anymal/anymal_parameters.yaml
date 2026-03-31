@@ -48,7 +48,7 @@
 
     #### Body 采样点云（Python elevation_mapping_node 内）########
     # 车体系 GridMap 正方形边长 [m]（高程栅格不按矩形裁切）；点云仍用下面矩形 body_map_length_x/y
-    body_map_grid_length: 4.0
+    body_map_grid_length: 2.8
     # 车体系中心矩形：x 为列方向(前后)列长，y 为行方向(左右)行宽（仅体点云窗口）；resolution=0.1 时 2.6→每行 26 格
     body_map_length_x: 2.6
     body_map_length_y: 1.6
