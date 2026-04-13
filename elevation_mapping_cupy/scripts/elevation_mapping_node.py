@@ -130,6 +130,19 @@ class ElevationMappingNode(Node):
             self.declare_parameter("body_cloud_publish_index_markers", True)
         if not self.has_parameter("body_cloud_marker_stride"):
             self.declare_parameter("body_cloud_marker_stride", 1)
+        if not self.has_parameter("body_cloud_sample_stride"):
+            self.declare_parameter("body_cloud_sample_stride", 1)
+        _body_cloud_ss = (
+            self.get_parameter("body_cloud_sample_stride")
+            .get_parameter_value()
+            .integer_value
+        )
+        if _body_cloud_ss < 1:
+            self.get_logger().warn(
+                f"body_cloud_sample_stride={_body_cloud_ss} 无效，使用 1（>=1 的整数）"
+            )
+            _body_cloud_ss = 1
+        self._body_cloud_sample_stride = _body_cloud_ss
         if not self.has_parameter("body_cloud_marker_scale"):
             self.declare_parameter("body_cloud_marker_scale", 0.06)
         if not self.has_parameter("body_cloud_marker_z_offset"):
@@ -769,6 +782,9 @@ class ElevationMappingNode(Node):
                 jc = nc - 1 - map_col
                 if 0 <= ir < nr and 0 <= jc < nc:
                     out[row, col] = self._map_data[ir, jc] - t_map_body[2]
+        s = self._body_cloud_sample_stride
+        if s > 1:
+            out = out[::s, ::s]
         return out
 
     def _extract_body_frame_grid_and_cloud(
@@ -984,6 +1000,7 @@ class ElevationMappingNode(Node):
         right_back：k=0 为右后格 (row=0,col=0)；先行内 col=0…cols-1（后→前），再 row 递增（右→左）。车体系 x 前 y 左时 col 小为后、row 小为右。
         """
         resolution = self._map.resolution
+        stride = self._body_cloud_sample_stride
         half_local_x = length_x / 2.0
         half_local_y = length_y / 2.0
         rows, cols = body_map.shape
@@ -995,8 +1012,8 @@ class ElevationMappingNode(Node):
 
         def put(r: int, c: int) -> None:
             nonlocal idx
-            pts[idx, 0] = -half_local_x + (c + 0.5) * resolution
-            pts[idx, 1] = -half_local_y + (r + 0.5) * resolution
+            pts[idx, 0] = -half_local_x + (c * stride + 0.5) * resolution
+            pts[idx, 1] = -half_local_y + (r * stride + 0.5) * resolution
             pts[idx, 2] = bm[r, c]
             idx += 1
 
@@ -1042,6 +1059,7 @@ class ElevationMappingNode(Node):
         pitch/roll 变化时，同一下标 k 的 x,y 不再等于水平栅格上的常数坐标。
         与 _sample_body_window_pointcloud 一致：z_rel = map_z - t_z。"""
         resolution = self._map.resolution
+        stride = self._body_cloud_sample_stride
         half_local_x = length_x / 2.0
         half_local_y = length_y / 2.0
         rows, cols = body_map.shape
@@ -1056,8 +1074,8 @@ class ElevationMappingNode(Node):
         def put_oriented(r: int, c: int) -> None:
             nonlocal idx
             z_rel = float(bm[r, c])
-            x_grid = -half_local_x + (c + 0.5) * resolution
-            y_grid = -half_local_y + (r + 0.5) * resolution
+            x_grid = -half_local_x + (c * stride + 0.5) * resolution
+            y_grid = -half_local_y + (r * stride + 0.5) * resolution
             if not np.isfinite(z_rel):
                 pts[idx, 0] = float("nan")
                 pts[idx, 1] = float("nan")
